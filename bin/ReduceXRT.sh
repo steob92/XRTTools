@@ -276,7 +276,10 @@ for DIR in $(ls $DATADIR);do
     correct_pileUP
     write_RegionsWT
     extract_spectra_all
-    cd ../
+    cd -
+  else
+      echo "$DATADIR/$DIR not found..."
+      echo "pwd: $(pwd)"
   fi
 
   #break
