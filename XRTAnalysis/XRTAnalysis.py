@@ -3,7 +3,8 @@ import numpy as np
 from scipy.optimize import curve_fit
 from __deabsorb import deabsorb as deab
 import matplotlib.pyplot as plt
-
+from astropy.table import Table
+from astropy import units as u
 # Checking if xspec can be imported
 # PyXSpec can be installed with heasoft!
 try :
@@ -380,3 +381,20 @@ class XRT_Analysis():
     # Get fTest probability of two fits
     def fTest(self, chi2_a,  dof_a, chi2_b, dof_b ):
         return xspec.Fit.ftest(chi2_a, dof_a, chi2_b, dof_b)
+
+
+
+    def writeSpecTable(self):
+
+        cols = [ self.modelDict["Energy [keV]"] * u.keV,
+                self.modelDict["Energy_err [keV]"] * u.keV,
+                self.modelDict["e2dnde [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s ,
+                self.modelDict["e2dnde_err [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s,
+                self.modelDict["e2dnde_deabsorbed [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s,
+                self.modelDict["e2dnde_deabsorbed_err [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s
+                ]
+
+        colnam = ["Energy", "EnergyErr", "E2dNdE", "E2dNdEErr", "E2dNdE_deabsorbed", "E2dNdEErr_deabsorbed"]
+
+        tabl = Table(cols, names = colnam)
+        return tabl
