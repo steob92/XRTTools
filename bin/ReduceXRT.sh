@@ -1,8 +1,9 @@
 #!/bin/bash
-'''
-    Script to reduce and group XRT data
-    Both PC and WT modes
-'''
+
+#'''
+#    Script to reduce and group XRT data
+#    Both PC and WT modes
+#'''
 
 
 function usage()
@@ -13,12 +14,11 @@ function usage()
   echo -e "\t ./Reduced contains OBS_ID/swOBD_ID*cl.evt"
 
 }
-SUBDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 RA=-1
 DEC=-1
 
 
-while getopts ":hr:d:f:e:" opt; do
+while getopts ":r:d:ef:h" opt; do
   case ${opt} in
     r )
       RA=${OPTARG}
@@ -29,6 +29,10 @@ while getopts ":hr:d:f:e:" opt; do
     e )
       RA=356.77015
       DEC=51.70497
+      DATADIR=Reprocessed
+      ;;
+    f )
+      DATADIR=${OPTARG}
       ;;
     h )
       usage
@@ -39,7 +43,8 @@ while getopts ":hr:d:f:e:" opt; do
 done
 echo "RA: $RA"
 echo "DEC: $DEC"
-
+echo "Data: $DATADIR"
+SUBDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 
 # Run xselect to extract image data
@@ -50,7 +55,7 @@ function extract_image()
 xrt
 
 read event $1
-
+./
 
 extract image
 save image $2.img
@@ -71,7 +76,7 @@ function extract_spectrum()
 xrt
 
 read event $FILE
-
+./
 
 filter region $FILT
 
@@ -259,11 +264,13 @@ function correct_pileUP()
 }
 
 
-# loop over directories
-for DIR in $(ls);do
 
-  if [ -d "$DIR" ]; then
-    cd $DIR
+echo "Looping"
+# loop over directories
+for DIR in $(ls $DATADIR);do
+  echo "$DATADIR/$DIR"
+  if [ -d "$DATADIR/$DIR" ]; then
+    cd $DATADIR/$DIR
     echo $DIR
     extract_image_all
     correct_pileUP
@@ -272,6 +279,6 @@ for DIR in $(ls);do
     cd ../
   fi
 
-  # break
+  #break
 
 done
