@@ -8,17 +8,18 @@
 
 function usage()
 {
-  echo "Usage: ReduceXRT.sh -r SourceRA -d SourceDec -f /Path/To/Reduced/Files"
-  echo "Example: ReduceXRT.sh -r 356.77015 -d 51.70497 -f ./Reduced"
+  echo "Usage: ReduceXRT.sh -r SourceRA -d SourceDec -f /Path/To/Reduced/Files -p /path/to/pileup.csv"
+  echo "Example: ReduceXRT.sh -r 356.77015 -d 51.70497 -f ./Reduced -p ./pileup.csv"
   echo -e "\t where RA and Dec are in degrees"
   echo -e "\t ./Reduced contains OBS_ID/swOBD_ID*cl.evt"
+  echo -e "\t ./pileup.csv is in the format OBS_ID,NPIXELS"
 
 }
 RA=-1
 DEC=-1
+PILEUPFILE=""
 
-
-while getopts ":r:d:ef:h" opt; do
+while getopts ":r:d:p:ef:h" opt; do
   case ${opt} in
     r )
       RA=${OPTARG}
@@ -33,6 +34,9 @@ while getopts ":r:d:ef:h" opt; do
       ;;
     f )
       DATADIR=${OPTARG}
+      ;;
+    p )
+      PILEUPFILE=${OPTARG}
       ;;
     h )
       usage
@@ -273,7 +277,20 @@ for DIR in $(ls $DATADIR);do
     cd $DATADIR/$DIR
     echo $DIR
     extract_image_all
-    correct_pileUP
+    if [ -z "$PILEUPFILE" ]
+    then
+          correct_pileUP
+    else
+      while IFS=, read -r OBSID PIX
+      do
+        if [ "$DIR" == "$OBSID" ]; then
+          echo "$OBSID and $PIX"
+          write_offRegionPC
+          write_RegionsPC $PIX
+          break
+        fi
+      done < $PILEUPFILE
+    fi
     write_RegionsWT
     extract_spectra_all
     cd -
