@@ -247,13 +247,17 @@ class XRT_Analysis():
             # print (np.power(10., self.m1.cflux.lg10Flux.values[0]))
             # print (np.power(10., self.m1.cflux.lg10Flux.values[0] - self.m1.cflux.lg10Flux.sigma))
             # print (np.power(10., self.m1.cflux.lg10Flux.values[0] + self.m1.cflux.lg10Flux.sigma))
-            err = xspec.Fit.error("1. 4")
-            err = xspec.Fit.error("1. 4")
-            err = xspec.Fit.error("1. 4")
-            err = xspec.Fit.error("1. 4")
-            par4 = self.m1.cflux.lg10Flux.error
-            print (self.m1.cflux.lg10Flux.sigma)
-            print (par4)
+            try:
+                err = xspec.Fit.error("1. 4")
+            
+                par4 = self.m1.cflux.lg10Flux.error
+                print (self.m1.cflux.lg10Flux.sigma)
+                print (par4)
+            except Exception as e:
+
+                print("Problem getting error. Chi^2 greater than 2? \n\t%s"%e)
+                err = -999
+                par4 = [0, 0]
             # print (self.m1.cflux.lg10Flux.er)
             # print (par4.error)
             print (np.power(10., self.m1.cflux.lg10Flux.values[0]),
