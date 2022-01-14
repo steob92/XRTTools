@@ -1,7 +1,7 @@
 import numpy as np
 # For fitting intrinsic power law
 from scipy.optimize import curve_fit
-from __deabsorb import deabsorb as deab
+from .__deabsorb import deabsorb as deab
 import matplotlib.pyplot as plt
 from astropy.table import Table
 from astropy import units as u
@@ -33,6 +33,7 @@ class XRT_Analysis():
 
         # N_h, defaulted to galactic value
         # 2.56e20
+        self.abs = "pha"
         self.nH = 2.56
 
 
@@ -60,9 +61,11 @@ class XRT_Analysis():
         # Model Handler
         self.model = 0
         self.modelType = 0
+        self.modelIntrinsic = 0
 
 
         self.ifcFlux = True
+        xspec.Fit.statMethod = 'chi'
 
 
     # Function to initialize XSpec
@@ -81,6 +84,12 @@ class XRT_Analysis():
 
         self.m1 = 0
 
+
+    # Use C-Statistics in fitting
+    def setCStat(self):
+        xspec.Fit.statMethod = "cstat"
+
+
     # Set the grouped PHA file
     def setGroupedPHA(self, igrpFile):
         self.grpFileName = igrpFile
@@ -93,35 +102,64 @@ class XRT_Analysis():
 
 
     # Define the model, asuming one is using cflux
-    def setModel(self, imodel = "pwl", cflux = True):
+    def setModel(self, imodel = "pwl", cflux = True, absorb = None):
 
         self.ifcFlux  = cflux
-        # power law model
-        if imodel == "pwl":
-            if self.ifcFlux :
-                self.modelType = "pha*cflux*po"
-                self.m1 = xspec.Model(self.modelType)
-                self.m1.powerlaw.norm.frozen = True
-            else :
-                self.modelType = "pha*po"
-                self.m1 = xspec.Model(self.modelType)
-                self.m1.powerlaw.norm.frozen = False
+        if cflux:
+            str_cflux = "*cflux"
+        else:
+            str_cflux = ""
 
-        # log parabola model
-        elif imodel == "logpar":
-            if self.ifcFlux :
-                self.modelType = "pha*cflux*logpar"
-                self.m1 = xspec.Model(self.modelType)
-                self.m1.logpar.norm.frozen = True
+        if absorb is None:
+            # Default what ever was previously defined
+            absorb = self.abs
+        else:
+            self.abs = absorb
 
-            else :
-                self.modelType = "pha*logpar"
-                self.m1 = xspec.Model(self.modelType)
-                self.m1.logpar.norm.frozen = False
+        if imodel.lower() == "pwl":
+            mod = "*po"
+            self.modelIntrinsic = "pwl"
+        elif imodel.lower() == "logpar":
+            mod = "*logpar"
+            self.modelIntrinsic = "logpar"
 
         else :
             print ("Model unknown. Feel free to add it.\n defaulting to a power law")
             self.setModel("pwl")
+
+        # power law model
+        # if imodel == "pwl":
+        #     if self.ifcFlux :
+        #         self.modelType = "pha*cflux*po"
+        #         self.m1 = xspec.Model(self.modelType)
+        #         self.m1.powerlaw.norm.frozen = True
+        #     else :
+        #         self.modelType = "pha*po"
+        #         self.m1 = xspec.Model(self.modelType)
+        self.modelType = absorb + str_cflux + mod
+        self.m1 = xspec.Model(self.modelType)
+        
+        # # # log parabola model
+        # # elif imodel == "logpar":
+        # #     if self.ifcFlux :
+        # #         self.modelType = "pha*cflux*logpar"
+        # #         self.m1 = xspec.Model(self.modelType)
+        # #         self.m1.logpar.norm.frozen = True
+
+        # #     else :
+        # #         self.modelType = "pha*logpar"
+        # #         self.m1 = xspec.Model(self.modelType)
+        # #         self.m1.logpar.norm.frozen = False
+
+        # else :
+        #     print ("Model unknown. Feel free to add it.\n defaulting to a power law")
+        #     self.setModel("pwl")
+
+        if imodel.lower() == "pwl":
+            self.m1.powerlaw.norm.frozen = cflux
+        elif imodel.lower() == "logpar":
+            self.m1.logpar.norm.frozen = cflux
+
 
         if self.ifcFlux :
             self.m1.cflux.Emin = self.emin
@@ -131,15 +169,18 @@ class XRT_Analysis():
     # Setting the Column Density
     def setNH(self, i_nH, i_fixed = True):
         self.nH = i_nH
-        self.m1.phabs.nH = i_nH
-        self.m1.phabs.nH.frozen = i_fixed
-
+        if (self.abs == "pha"):
+            self.m1.phabs.nH = i_nH
+            self.m1.phabs.nH.frozen = i_fixed
+        elif (self.abs == "wabs"):
+            self.m1.wabs.nH = i_nH
+            self.m1.wabs.nH.frozen = i_fixed
 
     # Appling the fit and doing some inital Corrections
     def doFit(self):
 
         xspec.Fit.nIterations = 10000
-        xspec.Fit.statMethod = 'chi'
+        # xspec.Fit.statMethod = 'chi'
         xspec.Fit.perform()
         self.writeModel()
 
@@ -174,7 +215,10 @@ class XRT_Analysis():
         self.modelDict["Energy_err [keV]"] = np.array(xspec.Plot.xErr(1,2))
         self.modelDict["e2dnde_err [keV cm^-2 s^-1]"] = np.array(xspec.Plot.yErr(1,2))
 
-        d = deab(self.nH)
+        if self.abs == "wabs":
+            d = deab(self.nH, method = "wabs")
+        else:
+            d = deab(self.nH)
         self.modelDict["e2dnde_deabsorbed [keV cm^-2 s^-1]"], \
         self.modelDict["e2dnde_deabsorbed_err [keV cm^-2 s^-1]"] = \
                     d.deabsorb(
@@ -183,7 +227,7 @@ class XRT_Analysis():
                                 self.modelDict["e2dnde_err [keV cm^-2 s^-1]"])
 
 
-        if (self.modelType == "pha*cflux*po") :
+        if (self.modelIntrinsic == "pwl") :
 
             # Checking if fit is valid
             if (self.modelDict["Chi2"] / self.modelDict["DOF"] > 2. ):
@@ -192,10 +236,16 @@ class XRT_Analysis():
 
             else:
                 # getting 1 sigma error instead of default 95%
-                xspec.Fit.error("1. 4")  # cflux
-                xspec.Fit.error("1. 5")  # index
-                self.index = float(self.m1.powerlaw.PhoIndex)
-                index_err = xspec.AllModels(1)(5).error
+                if (self.ifcFlux):
+                    xspec.Fit.error("1. 4")  # cflux
+                    xspec.Fit.error("1. 5")  # index
+                    self.index = float(self.m1.powerlaw.PhoIndex)
+                    index_err = xspec.AllModels(1)(5).error
+                else:
+                    xspec.Fit.error("1. 3")  # norm
+                    xspec.Fit.error("1. 2")  # index
+                    self.index = float(self.m1.powerlaw.PhoIndex)
+                    index_err = xspec.AllModels(1)(2).error
 
 
 
@@ -204,7 +254,7 @@ class XRT_Analysis():
             self.modelDict["Index_errl"] = self.index - float(index_err[0])
             self.modelDict["Index_erru"] = float(index_err[1]) - self.index
 
-        elif (self.modelType == "pha*cflux*logpar") :
+        elif (self.modelIntrinsic == "logpar") :
 
 
             # Checking if fit is valid
@@ -272,13 +322,17 @@ class XRT_Analysis():
             self.modelDict["Flux_erru [erg cm^-2 s^-1]"] = np.power(10., self.m1.cflux.lg10Flux.values[0] + self.m1.cflux.lg10Flux.sigma)
 
         else :
-            print (xspec.AllModels.calcFlux("2. 10.0"))
-            print (xspec.AllModels.calcFlux("2. 10.0 err"))
-            print (xspec.AllModels.calcFlux("2. 10.0 1 err"))
+            iflux = xspec.AllModels.calcFlux("2. 10.0")
+            iflux_err = xspec.AllModels.calcFlux("2. 10.0 err")
+            iflux_err2 = xspec.AllModels.calcFlux("2. 10.0 1 err")
 
-            self.modelDict["Flux [erg cm^-2 s^-1]"] = 0
-            self.modelDict["Flux_errl [erg cm^-2 s^-1]"] = 0
-            self.modelDict["Flux_erru [erg cm^-2 s^-1]"] = 0
+            iflux = xspec.AllData(1).flux
+            # iflux = float(iflux.split()[4].replace("(",""))
+            # iflux_errl = float(iflux.split()[4].replace("(",""))
+            # iflux_errh = float(iflux.split()[4].replace("(",""))
+            self.modelDict["Flux [erg cm^-2 s^-1]"] = iflux[0]
+            self.modelDict["Flux_errl [erg cm^-2 s^-1]"] = iflux[0] - iflux[1]
+            self.modelDict["Flux_erru [erg cm^-2 s^-1]"] = iflux[2] - iflux[0]
 
         # Plotting model
         xspec.Plot("model")
