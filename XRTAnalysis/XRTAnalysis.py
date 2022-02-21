@@ -64,6 +64,8 @@ class XRT_Analysis():
         self.modelIntrinsic = 0
 
 
+        self.covar = None
+
         self.ifcFlux = True
         xspec.Fit.statMethod = 'chi'
 
@@ -244,8 +246,35 @@ class XRT_Analysis():
                 else:
                     xspec.Fit.error("1. 3")  # norm
                     xspec.Fit.error("1. 2")  # index
+                    norm = float(self.m1.powerlaw.norm)
                     self.index = float(self.m1.powerlaw.PhoIndex)
                     index_err = xspec.AllModels(1)(2).error
+                    norm_err = xspec.AllModels(1)(3).error
+                    # Covariance Matrix
+                    cov = xspec.Fit.covariance
+                    
+                    self.covar = np.zeros((2,2))
+                    self.covar_labels = np.empty((2,2),  dtype="str")
+
+                    self.covar[0][0] = cov[0]
+                    self.covar[0][1] = cov[1]
+                    
+                    self.covar_labels[0][0] = "didi"
+                    self.covar_labels[0][1] = "didn"
+                    
+                    self.covar[1][0] = cov[1]
+                    self.covar[1][1] = cov[2]
+
+                    self.covar_labels[1][0] = "dndi"
+                    self.covar_labels[1][1] = "dndn"
+
+                    # Need to think about how cflux's error works
+                    self.modelDict["Norm"] = norm
+                    self.modelDict["Norm_errl"] = norm - float(norm_err[0])
+                    self.modelDict["Norm_erru"] = float(norm_err[1]) - norm
+                    self.modelDict["CoVar"] = self.covar
+                    self.modelDict["CoVar_labels"] = self.covar_labels
+
 
 
 
@@ -269,16 +298,78 @@ class XRT_Analysis():
                 beta_err = [0,0]
 
             else:
-                # getting 1 sigma error instead of default 95%
-                xspec.Fit.error("1. 4")  # cflux
-                xspec.Fit.error("1. 5")  # alpha
-                xspec.Fit.error("1. 6")  # beta
 
-                alpha = float(self.m1.logpar.alpha)
-                beta = float(self.m1.logpar.beta)
+                # Come back to this later...
+                if (self.ifcFlux):
+                    pass
+                    # getting 1 sigma error instead of default 95%
+                    xspec.Fit.error("1. 4")  # cflux
+                    xspec.Fit.error("1. 5")  # alpha
+                    xspec.Fit.error("1. 6")  # beta
 
-                alpha_err = xspec.AllModels(1)(5).error
-                beta_err = xspec.AllModels(1)(6).error
+                    alpha = float(self.m1.logpar.alpha)
+                    beta = float(self.m1.logpar.beta)
+
+                    alpha_err = xspec.AllModels(1)(5).error
+                    beta_err = xspec.AllModels(1)(6).error
+                else:
+
+                    # getting 1 sigma error instead of default 95%
+                    xspec.Fit.error("1. 5")  # norm
+                    xspec.Fit.error("1. 2")  # alpha
+                    xspec.Fit.error("1. 3")  # beta
+
+                    alpha = float(self.m1.logpar.alpha)
+                    beta = float(self.m1.logpar.beta)
+                    norm = float(self.m1.logpar.norm)
+
+                    norm_err = xspec.AllModels(1)(5).error
+                    alpha_err = xspec.AllModels(1)(2).error
+                    beta_err = xspec.AllModels(1)(3).error
+
+                    # Get covariance matrix
+                    # Outputs a list, I'm sure the order makes sense to someone
+                    # but not me
+                    cov = xspec.Fit.covariance
+                    self.covar = np.zeros((3,3))
+                    # To help the user
+                    self.covar_labels = np.empty((3,3),  dtype="str")
+                    
+                    self.covar[0][0] = cov[0]
+                    self.covar[0][1] = cov[1]
+                    self.covar[0][2] = cov[3]
+
+                    self.covar_labels[0][0] = "dada"
+                    self.covar_labels[0][1] = "dadb"
+                    self.covar_labels[0][2] = "dadn"
+
+
+                    
+
+                    self.covar[1][0] = cov[1]
+                    self.covar[1][1] = cov[2]
+                    self.covar[1][2] = cov[4]
+                    
+                    self.covar_labels[1][0] = "dbda"
+                    self.covar_labels[1][1] = "dbdb"
+                    self.covar_labels[1][2] = "dbdn"
+                    
+                    self.covar[2][0] = cov[3]
+                    self.covar[2][1] = cov[4]
+                    self.covar[2][2] = cov[5]
+
+                    self.covar_labels[2][0] = "dnda"
+                    self.covar_labels[2][1] = "dndb"
+                    self.covar_labels[2][2] = "dndn"
+
+
+                    # Need to think about how cflux's error works
+                    self.modelDict["Norm"] = norm
+                    self.modelDict["Norm_errl"] = norm - float(norm_err[0])
+                    self.modelDict["Norm_erru"] = float(norm_err[1]) - norm
+                    self.modelDict["CoVar"] = self.covar
+                    self.modelDict["CoVar_labels"] = self.covar_labels
+
 
             self.modelDict["Alpha"] = alpha
             self.modelDict["Alpha_errl"] = alpha - float(alpha_err[0])
@@ -318,8 +409,8 @@ class XRT_Analysis():
             print (self.m1.cflux.lg10Flux.values[0] + self.m1.cflux.lg10Flux.sigma)
             print (self.m1.cflux.lg10Flux.values[0] - self.m1.cflux.lg10Flux.sigma)
             self.modelDict["Flux [erg cm^-2 s^-1]"] = np.power(10., self.m1.cflux.lg10Flux.values[0])
-            self.modelDict["Flux_errl [erg cm^-2 s^-1]"] = np.power(10., self.m1.cflux.lg10Flux.values[0] - self.m1.cflux.lg10Flux.sigma)
-            self.modelDict["Flux_erru [erg cm^-2 s^-1]"] = np.power(10., self.m1.cflux.lg10Flux.values[0] + self.m1.cflux.lg10Flux.sigma)
+            self.modelDict["Flux_errl [erg cm^-2 s^-1]"] = np.power(10., self.m1.cflux.lg10Flux.values[0]) - np.power(10., self.m1.cflux.lg10Flux.values[0] - self.m1.cflux.lg10Flux.sigma)
+            self.modelDict["Flux_erru [erg cm^-2 s^-1]"] = np.power(10., self.m1.cflux.lg10Flux.values[0] + self.m1.cflux.lg10Flux.sigma) - np.power(10., self.m1.cflux.lg10Flux.values[0])
 
         else :
             iflux = xspec.AllModels.calcFlux("2. 10.0")
