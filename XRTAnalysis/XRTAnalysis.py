@@ -87,6 +87,17 @@ class XRT_Analysis():
         self.m1 = 0
 
 
+    def addSpectrum(self, grpFileName):
+        xspec.Spectrum(grpFileName)
+        # For plotting
+        xspec.Plot.xAxis = "kev"
+        xspec.Plot.setRebin(10,10)
+        # Ignoring invalid data chanels
+        xspec.AllData.ignore("bad")
+        xspec.AllData.ignore("**-0.3 10.-**")
+
+
+
     # Use C-Statistics in fitting
     def setCStat(self):
         xspec.Fit.statMethod = "cstat"
@@ -200,8 +211,13 @@ class XRT_Analysis():
         intspec /= ( emax ** (-index +1) - emin ** (-index +1) )
         return intspec
 
-    def __pwl(self, e, norm):
-        return norm*e**(-self.index)
+    def pwl(self, e, norm, index):
+        return norm*e**(-index)
+
+    # Log parabola as defined by xspec
+    # NOTE: xspec assumes log10 in the power
+    def logpar(self, e, norm, alpha, beta):
+        return norm*e**-(alpha + beta * np.log10(e))
 
     # Writing results to a dictionary
     def writeModel(self):
@@ -446,6 +462,53 @@ class XRT_Analysis():
         self.modelDict["model_intrinsic_e2dnde [keV cm^-2 s^-1]"] = np.array(intrinspec[0])
 
 
+
+
+    # Calculate the Confidience interval for the fit
+    # Return e, fx and delf
+    # Interval defined as fx +/- delfx
+    def getConfidienceInterval(self, parms, Cov):
+
+        # Define over XRT's range
+        E = np.logspace(np.log10(0.3), 1)
+
+        # power law case
+        if (self.modelIntrinsic == "pwl"):
+            fx = self.pwl(E, parms[0], parms[1])
+
+            # (df/dn)^2 sigma_nn
+            a = Cov[1][1] / parms[0] / parms[0]
+            # (df/dg)^2 sigma_gg
+            b = (np.log(E)**2)*Cov[0][0]
+
+            # df/dn * df/dg * sigma_ng
+            c = -2 * np.log(E) * Cov[0][1] / parms[0]
+
+            fdelx = fx * np.sqrt(a + b + c)
+
+        elif (self.modelIntrinsic == "logpar"):
+
+            fx = self.logpar(E, parms[0], parms[1], parms[2])
+            # (df/dn)^2 sigma_nn
+            a = Cov[2][2] / parms[0] / parms[0]
+            # (df/da)^2 sigma_aa
+            b = (np.log(E)**2)*Cov[0][0]
+            # (df/db)^2 sigma_bb
+            c = (np.log(E) * np.log10(E))**2 *Cov[1][1]
+            
+            # df/dn * df/da * sigma_na
+            d = -2 * np.log(E) * Cov[2][0] / parms[0]
+            # df/dn * df/db * sigma_nb
+            e = -2 * np.log(E) * np.log10(E) * Cov[2][1] / parms[0]
+            # df/da * df/db * sigma_ab
+            f = 2 * np.log(E) **2 * np.log10(E) * Cov[0][1]
+            
+            fdelx = fx * np.sqrt(a + b + c + d + e + f)
+        else :
+            print ("Model not yet implemented")
+            return 0, 0, 0
+
+        return E, fx, fdelx
 
     # Return the dict of results
     def getFitResults(self):
