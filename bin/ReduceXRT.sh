@@ -204,7 +204,7 @@ function extract_spectra_all()
   WTFILE=wt_cl.evt
 
   if [ -f $PCFILE ]; then
-    rm pc_src.arf
+    rm -f pc_src.arf
     extract_spectrum "$PCFILE" "pc_src.reg" "pc_src.pha"
     extract_spectrum "$PCFILE" "pc_back.reg" "pc_back.pha"
     xrtmkarf phafile=pc_src.pha srcx=-1 srcy=-1 outfile=pc_src.arf psfflag=yes expofile=pc_ex.img
@@ -215,7 +215,7 @@ function extract_spectra_all()
 
   # Extract WT file
   if [ -f $WTFILE ]; then
-    rm wt_src.arf
+    rm -f wt_src.arf
     extract_spectrum "$WTFILE" "wt_src.reg" "wt_src.pha"
     extract_spectrum "$WTFILE" "wt_back.reg" "wt_back.pha"
     xrtmkarf phafile=wt_src.pha srcx=-1 srcy=-1 outfile=wt_src.arf psfflag=yes expofile=wt_ex.img
