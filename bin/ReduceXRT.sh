@@ -182,36 +182,57 @@ function extract_image_all()
 
 
 # Run extract_image for either pc or wt cleaned events in that directory
-function extract_spectra_all()
+function extract_image_all()
 {
   # Looking for PC files
-  PCFILE=pc_cl.evt
-
+  NFILE_PC=$(ls *pc*po_cl.evt | wc -l)
+  PCRMFFILE=$(ls *pc*.rmf)
   # Looking for WT files
-  WTFILE=wt_cl.evt
+  WTRMFFILE=$(ls *wt*.rmf)
+  NFILE_WT=$(ls *wt*po_cl.evt | wc -l)
 
-  if [ -f $PCFILE ]; then
-    rm pc_src.arf
-    extract_spectrum "$PCFILE" "pc_src.reg" "pc_src.pha"
-    extract_spectrum "$PCFILE" "pc_back.reg" "pc_back.pha"
-    xrtmkarf phafile=pc_src.pha srcx=-1 srcy=-1 outfile=pc_src.arf psfflag=yes expofile=pc_ex.img
-    group_pha "pc_src.pha" "pc_grp.pha" "pc_back.pha" "pc.rmf" "pc_src.arf"
+  XRTPIPELOG=$(ls xrtpipeline_*.log)
+  # Look for respective RMF files to be used in later stages of analysis
+  for f in $(awk '/Name of the input RMF file/ {print $7}' $XRTPIPELOG | tr -d \' | tr -d :); do
+    RMFFILE="$(basename $f)"
+    if [[ "$RMFFILE" == *"wt"* ]]; then
+      RMFNAME="wt.rmf"
+    elif [[ "$RMFFILE" == *"pc"* ]]; then
+      RMFNAME="pc.rmf"
+    fi
+    rm -f $RMFNAME
+    ln -fs $f $RMFNAME
+  done
+
+  # Extract PC image
+  if [ "$NFILE_PC" -eq "1" ]; then
+    echo "##########################"
+    echo "Extracting PC"
+    echo "##########################"
+
+    PCFILE=$(ls *pc*po_cl.evt)
+    PCRMFFILE=$(ls *pc*.rmf)
+    PCEXPFILE=$(ls *pc*po_ex.img)
+
+    rm -f pc.img pc_cl.evt
+    extract_image "$PCFILE" "pc"
+    ln -fs $PCFILE pc_cl.evt
+    ln -fs $PCEXPFILE pc_ex.img
   fi
 
-
-
   # Extract WT file
-  if [ -f $WTFILE ]; then
-    rm wt_src.arf
-    extract_spectrum "$WTFILE" "wt_src.reg" "wt_src.pha"
-    extract_spectrum "$WTFILE" "wt_back.reg" "wt_back.pha"
-    xrtmkarf phafile=wt_src.pha srcx=-1 srcy=-1 outfile=wt_src.arf psfflag=yes expofile=wt_ex.img
+  if [ "$NFILE_WT" -eq "1" ]; then
+    echo "##########################"
+    echo "Extracting WT"
+    echo "##########################"
 
-    # Not needed
-    #change_backscale "40" "wt_src.pha" "wt_rescale_src.pha"
-    change_backscale "39" "wt_back.pha" "wt_rescale_back.pha"
-    group_pha "wt_src.pha" "wt_grp.pha" "wt_rescale_back.pha" "wt.rmf" "wt_src.arf"
+    WTFILE=$(ls *wt*po_cl.evt)
+    WTEXPFILE=$(ls *wt*po_ex.img)
 
+    rm -f wt.img wt_cl.evt
+    extract_image "$WTFILE" "wt"
+    ln -fs $WTFILE wt_cl.evt
+    ln -fs $WTEXPFILE wt_ex.img
   fi
 }
 
