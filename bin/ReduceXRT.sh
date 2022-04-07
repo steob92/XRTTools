@@ -139,52 +139,6 @@ EOF
 function extract_image_all()
 {
   # Looking for PC files
-  PCFILE=$(ls *pc*_cl.evt)
-  PCRMFFILE=$(ls *pc*.rmf)
-  PCEXPFILE=$(ls *pc*_ex.img)
-  NFILE_PC=$(ls *pc*_cl.evt | wc -l)
-
-  # Looking for WT files
-  WTFILE=$(ls *wt*_cl.evt)
-  WTRMFFILE=$(ls *wt*.rmf)
-  WTEXPFILE=$(ls *wt*_ex.img)
-  NFILE_WT=$(ls *wt*_cl.evt | wc -l)
-
-  # Extract PC image
-  if [ "$NFILE_PC" -eq "1" ]; then
-    echo "##########################"
-    echo "Extracting PC"
-    echo "##########################"
-
-    rm pc.img pc_cl.evt
-    extract_image "$PCFILE" "pc"
-    ln -s $PCFILE pc_cl.evt
-    ln -s $PCRMFFILE pc.rmf
-    ln -s $PCEXPFILE pc_ex.img
-  fi
-
-  # Extract WT file
-  if [ "$NFILE_WT" -eq "1" ]; then
-    echo "##########################"
-    echo "Extracting WT"
-    echo "##########################"
-
-    rm wt.img wt_cl.evt
-    extract_image "$WTFILE" "wt"
-    ln -s $WTFILE wt_cl.evt
-    ln -s $WTRMFFILE wt.rmf
-    ln -s $WTEXPFILE wt_ex.img
-  fi
-}
-
-
-
-
-
-# Run extract_image for either pc or wt cleaned events in that directory
-function extract_image_all()
-{
-  # Looking for PC files
   NFILE_PC=$(ls *pc*po_cl.evt | wc -l)
   PCRMFFILE=$(ls *pc*.rmf)
   # Looking for WT files
@@ -233,6 +187,44 @@ function extract_image_all()
     extract_image "$WTFILE" "wt"
     ln -fs $WTFILE wt_cl.evt
     ln -fs $WTEXPFILE wt_ex.img
+  fi
+}
+
+
+
+
+
+# Run extract_image for either pc or wt cleaned events in that directory
+function extract_spectra_all()
+{
+  # Looking for PC files
+  PCFILE=pc_cl.evt
+
+  # Looking for WT files
+  WTFILE=wt_cl.evt
+
+  if [ -f $PCFILE ]; then
+    rm pc_src.arf
+    extract_spectrum "$PCFILE" "pc_src.reg" "pc_src.pha"
+    extract_spectrum "$PCFILE" "pc_back.reg" "pc_back.pha"
+    xrtmkarf phafile=pc_src.pha srcx=-1 srcy=-1 outfile=pc_src.arf psfflag=yes expofile=pc_ex.img
+    group_pha "pc_src.pha" "pc_grp.pha" "pc_back.pha" "pc.rmf" "pc_src.arf"
+  fi
+
+
+
+  # Extract WT file
+  if [ -f $WTFILE ]; then
+    rm wt_src.arf
+    extract_spectrum "$WTFILE" "wt_src.reg" "wt_src.pha"
+    extract_spectrum "$WTFILE" "wt_back.reg" "wt_back.pha"
+    xrtmkarf phafile=wt_src.pha srcx=-1 srcy=-1 outfile=wt_src.arf psfflag=yes expofile=wt_ex.img
+
+    # Not needed
+    #change_backscale "40" "wt_src.pha" "wt_rescale_src.pha"
+    change_backscale "39" "wt_back.pha" "wt_rescale_back.pha"
+    group_pha "wt_src.pha" "wt_grp.pha" "wt_rescale_back.pha" "wt.rmf" "wt_src.arf"
+
   fi
 }
 
