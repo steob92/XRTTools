@@ -27,11 +27,6 @@ while getopts ":r:d:p:ef:h" opt; do
     d )
       DEC=${OPTARG}
       ;;
-    e )
-      RA=356.77015
-      DEC=51.70497
-      DATADIR=Reprocessed
-      ;;
     f )
       DATADIR=${OPTARG}
       ;;
@@ -45,6 +40,14 @@ while getopts ":r:d:p:ef:h" opt; do
       ;;
   esac
 done
+
+# RA, DEC and input directory are required
+if [[ -z "$RA" ]] || [[ -z "$DEC" ]] || [[ -z "$DATADIR" ]]
+then
+  usage
+  exit
+fi
+
 echo "RA: $RA"
 echo "DEC: $DEC"
 echo "Data: $DATADIR"
@@ -122,6 +125,7 @@ function group_pha()
   grppha<<EOF
 $SRCPHA
 !$GRPPHA
+bad 0-29
 group min 20
 chkey BACKFILE ./$BACKPHA
 chkey RESPFILE ./$RMF
