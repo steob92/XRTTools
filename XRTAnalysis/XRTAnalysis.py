@@ -71,7 +71,7 @@ class XRT_Analysis():
 
 
     # Function to initialize XSpec
-    def _initializeXSpec(self):
+    def _initializeXSpec(self, bRebin = True):
         # Clearing any previous states
         xspec.AllData.clear()
         xspec.AllData.show()
@@ -79,7 +79,9 @@ class XRT_Analysis():
         self.spec = xspec.Spectrum(self.grpFileName)
         # For plotting
         xspec.Plot.xAxis = "kev"
-        xspec.Plot.setRebin(10,10)
+        if (bRebin):
+            print ("Rebinning")
+            xspec.Plot.setRebin(10,10)
         # Ignoring invalid data chanels
         xspec.AllData.ignore("bad")
         xspec.AllData.ignore("**-0.3 10.-**")
@@ -87,11 +89,13 @@ class XRT_Analysis():
         self.m1 = 0
 
 
-    def addSpectrum(self, grpFileName):
+    def addSpectrum(self, grpFileName, bRebin = True):
         xspec.Spectrum(grpFileName)
         # For plotting
         xspec.Plot.xAxis = "kev"
-        xspec.Plot.setRebin(10,10)
+        if (bRebin):
+            print ("Rebinning")
+            xspec.Plot.setRebin(10,10)
         # Ignoring invalid data chanels
         xspec.AllData.ignore("bad")
         xspec.AllData.ignore("**-0.3 10.-**")
@@ -104,9 +108,9 @@ class XRT_Analysis():
 
 
     # Set the grouped PHA file
-    def setGroupedPHA(self, igrpFile):
+    def setGroupedPHA(self, igrpFile, bRebin = True):
         self.grpFileName = igrpFile
-        self._initializeXSpec()
+        self._initializeXSpec(bRebin)
 
     # Setting the min/max of the Fit
     def setcfluxMinMax(self, emin, emax):
