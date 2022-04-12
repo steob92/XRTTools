@@ -7,8 +7,8 @@
 
 function usage()
 {
-  echo "Usage: XRTPipeline.sh -r SourceRA -d SourceDec -f /Path/To/Data/Files"
-  echo "Example: ReduceXRT.sh -r 356.77015 -d 51.70497 -f /1ES2344/Swift-XRT/"
+  echo "Usage: ./XRTPipeline.sh -r SourceRA -d SourceDec -f /Path/To/Data/Files"
+  echo "Example: ./XRTPipeline.sh -r 356.77015 -d 51.70497 -f /1ES2344/Swift-XRT/"
   echo -e "\t /1ES2344/Swift-XRT/ is expected to have a Data/ directory"
   echo -e "\t where Data/ contains OBS_ID/xrt/ and OBS_ID/auxil/"
   echo -e "\t and RA and Dec are in degrees"
