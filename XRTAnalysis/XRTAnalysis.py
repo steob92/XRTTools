@@ -1,7 +1,7 @@
 import numpy as np
 # For fitting intrinsic power law
 from scipy.optimize import curve_fit
-from .__deabsorb import deabsorb as deab
+from __deabsorb import deabsorb as deab
 import matplotlib.pyplot as plt
 from astropy.table import Table
 from astropy import units as u
@@ -81,7 +81,7 @@ class XRT_Analysis():
         xspec.Plot.xAxis = "kev"
         if (bRebin):
             print ("Rebinning")
-            xspec.Plot.setRebin(10,10)
+            xspec.Plot.setRebin(5,10)
         # Ignoring invalid data chanels
         xspec.AllData.ignore("bad")
         xspec.AllData.ignore("**-0.3 10.-**")
@@ -95,7 +95,7 @@ class XRT_Analysis():
         xspec.Plot.xAxis = "kev"
         if (bRebin):
             print ("Rebinning")
-            xspec.Plot.setRebin(10,10)
+            xspec.Plot.setRebin(5,10)
         # Ignoring invalid data chanels
         xspec.AllData.ignore("bad")
         xspec.AllData.ignore("**-0.3 10.-**")
@@ -155,7 +155,7 @@ class XRT_Analysis():
         #         self.m1 = xspec.Model(self.modelType)
         self.modelType = absorb + str_cflux + mod
         self.m1 = xspec.Model(self.modelType)
-        
+
         # # # log parabola model
         # # elif imodel == "logpar":
         # #     if self.ifcFlux :
@@ -272,16 +272,16 @@ class XRT_Analysis():
                     norm_err = xspec.AllModels(1)(3).error
                     # Covariance Matrix
                     cov = xspec.Fit.covariance
-                    
+
                     self.covar = np.zeros((2,2))
                     self.covar_labels = np.empty((2,2),  dtype="str")
 
                     self.covar[0][0] = cov[0]
                     self.covar[0][1] = cov[1]
-                    
+
                     self.covar_labels[0][0] = "didi"
                     self.covar_labels[0][1] = "didn"
-                    
+
                     self.covar[1][0] = cov[1]
                     self.covar[1][1] = cov[2]
 
@@ -354,7 +354,7 @@ class XRT_Analysis():
                     self.covar = np.zeros((3,3))
                     # To help the user
                     self.covar_labels = np.empty((3,3),  dtype="str")
-                    
+
                     self.covar[0][0] = cov[0]
                     self.covar[0][1] = cov[1]
                     self.covar[0][2] = cov[3]
@@ -364,16 +364,16 @@ class XRT_Analysis():
                     self.covar_labels[0][2] = "dadn"
 
 
-                    
+
 
                     self.covar[1][0] = cov[1]
                     self.covar[1][1] = cov[2]
                     self.covar[1][2] = cov[4]
-                    
+
                     self.covar_labels[1][0] = "dbda"
                     self.covar_labels[1][1] = "dbdb"
                     self.covar_labels[1][2] = "dbdn"
-                    
+
                     self.covar[2][0] = cov[3]
                     self.covar[2][1] = cov[4]
                     self.covar[2][2] = cov[5]
@@ -410,7 +410,7 @@ class XRT_Analysis():
             # print (np.power(10., self.m1.cflux.lg10Flux.values[0] + self.m1.cflux.lg10Flux.sigma))
             try:
                 err = xspec.Fit.error("1. 4")
-            
+
                 par4 = self.m1.cflux.lg10Flux.error
                 print (self.m1.cflux.lg10Flux.sigma)
                 print (par4)
@@ -499,14 +499,14 @@ class XRT_Analysis():
             b = (np.log(E)**2)*Cov[0][0]
             # (df/db)^2 sigma_bb
             c = (np.log(E) * np.log10(E))**2 *Cov[1][1]
-            
+
             # df/dn * df/da * sigma_na
             d = -2 * np.log(E) * Cov[2][0] / parms[0]
             # df/dn * df/db * sigma_nb
             e = -2 * np.log(E) * np.log10(E) * Cov[2][1] / parms[0]
             # df/da * df/db * sigma_ab
             f = 2 * np.log(E) **2 * np.log10(E) * Cov[0][1]
-            
+
             fdelx = fx * np.sqrt(a + b + c + d + e + f)
         else :
             print ("Model not yet implemented")
