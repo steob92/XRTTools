@@ -51,7 +51,7 @@ Now you can retrieve the data using the link to the tar file using, e.g., `wget 
 
 XRTTools contains:
 
-* scripts to manage the processing of *Level 1* data files into *Level 2* (cleaned event-lists), the data reduction into Level *Level 3* files, and basic testing
+* scripts to manage the processing of *Level 1* data files into *Level 2* (cleaned event-lists), the data reduction into *Level 3* files, and basic testing
 * a python module that serves as wrapper of [PyXspec](https://heasarc.gsfc.nasa.gov/xanadu/xspec/python/html/index.html) basic functionalities
 
 A more detailed view into the data structure and analysis is provided [here](https://www.swift.ac.uk/analysis/xrt/files.php).
