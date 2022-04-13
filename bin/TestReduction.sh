@@ -8,7 +8,7 @@
 function usage()
 {
   echo -e "Usage: TestReduction.sh -f /Path/To/Reduced/Files"
-  echo -e "Example: TestReduction.sh -f ./Reprocessed"
+  echo -e "Example: TestReduction.sh -f ./Reduced/"
   echo -e "\t ./Reprocessed contains OBS_ID/swOBD_ID*cl.evt"
   echo
   exit
