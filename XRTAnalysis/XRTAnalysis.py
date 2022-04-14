@@ -144,33 +144,8 @@ class XRT_Analysis():
             print ("Model unknown. Feel free to add it.\n defaulting to a power law")
             self.setModel("pwl")
 
-        # power law model
-        # if imodel == "pwl":
-        #     if self.ifcFlux :
-        #         self.modelType = "pha*cflux*po"
-        #         self.m1 = xspec.Model(self.modelType)
-        #         self.m1.powerlaw.norm.frozen = True
-        #     else :
-        #         self.modelType = "pha*po"
-        #         self.m1 = xspec.Model(self.modelType)
         self.modelType = absorb + str_cflux + mod
         self.m1 = xspec.Model(self.modelType)
-
-        # # # log parabola model
-        # # elif imodel == "logpar":
-        # #     if self.ifcFlux :
-        # #         self.modelType = "pha*cflux*logpar"
-        # #         self.m1 = xspec.Model(self.modelType)
-        # #         self.m1.logpar.norm.frozen = True
-
-        # #     else :
-        # #         self.modelType = "pha*logpar"
-        # #         self.m1 = xspec.Model(self.modelType)
-        # #         self.m1.logpar.norm.frozen = False
-
-        # else :
-        #     print ("Model unknown. Feel free to add it.\n defaulting to a power law")
-        #     self.setModel("pwl")
 
         if imodel.lower() == "pwl":
             self.m1.powerlaw.norm.frozen = cflux
@@ -405,9 +380,6 @@ class XRT_Analysis():
 
 
             print ("Getting Flux")
-            # print (np.power(10., self.m1.cflux.lg10Flux.values[0]))
-            # print (np.power(10., self.m1.cflux.lg10Flux.values[0] - self.m1.cflux.lg10Flux.sigma))
-            # print (np.power(10., self.m1.cflux.lg10Flux.values[0] + self.m1.cflux.lg10Flux.sigma))
             try:
                 err = xspec.Fit.error("1. 4")
 
@@ -419,8 +391,6 @@ class XRT_Analysis():
                 print("Problem getting error. Chi^2 greater than 2? \n\t%s"%e)
                 err = -999
                 par4 = [0, 0]
-            # print (self.m1.cflux.lg10Flux.er)
-            # print (par4.error)
             print (np.power(10., self.m1.cflux.lg10Flux.values[0]),
                     np.power(10, par4[0]),
                     np.power(10, par4[1]))
@@ -604,12 +574,12 @@ class XRT_Analysis():
 
         cols = [ self.modelDict["Energy [keV]"] * u.keV,
                 self.modelDict["Energy_err [keV]"] * u.keV,
+                
                 self.modelDict["e2dnde [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s ,
                 self.modelDict["e2dnde_err [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s,
                 self.modelDict["e2dnde_deabsorbed [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s,
                 self.modelDict["e2dnde_deabsorbed_err [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s
                 ]
-
         colnam = ["Energy", "EnergyErr", "E2dNdE", "E2dNdEErr", "E2dNdE_deabsorbed", "E2dNdEErr_deabsorbed"]
 
         tabl = Table(cols, names = colnam)
