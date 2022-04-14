@@ -112,3 +112,57 @@ Example:
 ```
 ./bin/TestReduction.sh -f ./1ES2344/Swift-XRT/Reduced/
 ```
+
+---
+
+## XRTAnalysis
+
+The [XRTAnalysis](https://github.com/steob92/XRTTools/blob/master/XRTAnalysis/XRTAnalysis.py) module contains a class and methods that facilitate the use o the *PyXspec* package, as well as a module to calculate the deabsorbed spectrum.
+
+To start an usual *XRTAnalysis* session, do:
+
+```python
+In [1]: from XRTAnalysis import XRT_Analysis as xrt
+In [2]: analysis = xrt() # initialize the class
+```
+
+To load a grouped pha file from inside it's origin directory (`<SOURCE>/Reprocessed/OBS_ID`):
+```python
+In [3]: analysis.addSpectrum("wt_grp.pha") # loading the grouped windowed  timing mode grouped file
+```
+
+Now to set energy range, the model and the hydrogen column density to be used in the fitting:
+```python
+In [4]: analysis.setcfluxMinMax(0.3,10.) # that is the range of the deabsorbed spectrum (cflux) in keV
+In [5]: analysis.setModel() # the default is a power law
+In [6]: analysis.setNH(0.0206) # in  units of 10.e22 atoms cm-2
+```
+You can use this [nH online calculator](https://www.swift.ac.uk/analysis/nhtot/) to get the values for a particular source.
+
+After that, we are set to perform the fit. Do that by running:
+
+```python
+In [7]: analysis.doFit()
+```
+
+Now one can use many functionalities to retrieve results from the analysis. Some are listed below:
+```python
+analysis.getFitResults() # returns a dict with SED, integral flux, best fit model parameters, etc.
+analysis.getFlux() # returns a tuple with integral flux, upper and lower errors
+
+import matplotlib.pyplot as plt
+analysis.plotEnergySpectrum() # returns a matplotlib.pyplot.figure with the absorbed and deabsorbed SEDs in the given range
+plt.show() # to show the plot
+
+from astropy.table import Table
+SED_table = analysis.writeSpecTable() # returns a table with SED points, and energies
+```
+
+The user is invited to create their own scripts.
+
+# Acknowledgements
+
+
+Most of the code in this repository was created by, or adapted from, the combined efforts of Amy Furniss (amy.furniss@gmail.com) and Ste O'Brien(stephan.obrien@mcgill.ca).
+
+For further questions and comments, please contact Ste O'Brien(stephan.obrien@mcgill.ca) and/or Pedro Batista(pedro.batista@desy.de)
