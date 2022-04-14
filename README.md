@@ -70,12 +70,12 @@ Example:
 ```
 ./bin/XRTPipeline.sh -r 356.77015 -d 51.70497 -f /1ES2344/Swift-XRT/
 ```
-where `/1ES2344/Swift-XRT/` is expected to have a Data directory that contains `OBS_ID/xrt/` and `OBS_ID/auxil/`.
+where `/1ES2344/Swift-XRT/` is expected to have a `Data/` directory that contains `OBS_ID/xrt/` and `OBS_ID/auxil/`.
 Outputs are written to `/1ES2344/Swift-XRT/Reprocessed/`.
 
 ### ReduceXRT
 
-After running `XRTPipeline.sh`, one needs now to run 'bin/ReduceXRT.sh'.
+After running `XRTPipeline.sh`, one needs now to run `bin/ReduceXRT.sh`.
 This script will:
 1. Create symbolic links to the required [RMF files](https://www.swift.ac.uk/analysis/xrt/rmfs.php) provided with CALDB, that were used during the *xrtpipeline* routine
 2. Using [xselect](https://www.swift.ac.uk/analysis/xrt/xselect.php), extract images using the cleaned event-list file generated with *xrtpipeline*
@@ -91,7 +91,7 @@ Usage:
 
 Example:
 ```
-./bin/ReduceXRT.sh -r 356.77015 -d 51.70497 -f ./1ES2344/Swift-XRT/Reduced/ -p ./pileup.csv"
+./bin/ReduceXRT.sh -r 356.77015 -d 51.70497 -f ./1ES2344/Swift-XRT/Reduced/ -p ./pileup.csv
 ```
 where RA and Dec are in degrees.
 `./1ES2344/Swift-XRT/Reduced/` contains `OBS_ID/sw<OBS_ID>*cl.evt`
@@ -99,7 +99,7 @@ where RA and Dec are in degrees.
 
 ### TestReduction
 
-Optionally, one can use `TestReduction.sh` to:
+**Optionally**, one can use `TestReduction.sh` to:
 * Check which mode has a higher exposure time (WT modes are favoured) and generate a run selection file
 * Test if all required files were generated (or properly linked) during the XRTPipeline and ReduceXRT routines
 
@@ -117,7 +117,7 @@ Example:
 
 ## XRTAnalysis
 
-The [XRTAnalysis](https://github.com/steob92/XRTTools/blob/master/XRTAnalysis/XRTAnalysis.py) module contains a class and methods that facilitate the use o the *PyXspec* package, as well as a module to calculate the deabsorbed spectrum.
+The [XRTAnalysis](https://github.com/steob92/XRTTools/blob/master/XRTAnalysis/XRTAnalysis.py) module contains a class and methods that facilitate the use of the *PyXspec* package, and a module to calculate the deabsorbed spectrum.
 
 To start an usual *XRTAnalysis* session, do:
 
@@ -133,8 +133,8 @@ In [3]: analysis.addSpectrum("wt_grp.pha") # loading the grouped windowed  timin
 
 Now to set energy range, the model and the hydrogen column density to be used in the fitting:
 ```python
-In [4]: analysis.setcfluxMinMax(0.3,10.) # that is the range of the deabsorbed spectrum (cflux) in keV
-In [5]: analysis.setModel() # the default is a power law
+In [4]: analysis.setcfluxMinMax(0.3,10.) # that is the energy range of the deabsorbed spectrum (cflux) in keV
+In [5]: analysis.setModel() # the default model is a power law
 In [6]: analysis.setNH(0.0206) # in  units of 10.e22 atoms cm-2
 ```
 You can use this [nH online calculator](https://www.swift.ac.uk/analysis/nhtot/) to get the values for a particular source.
