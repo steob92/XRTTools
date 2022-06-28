@@ -5,6 +5,8 @@ from __deabsorb import deabsorb as deab
 import matplotlib.pyplot as plt
 from astropy.table import Table
 from astropy import units as u
+
+import os
 # Checking if xspec can be imported
 # PyXSpec can be installed with heasoft!
 try :
@@ -89,7 +91,9 @@ class XRT_Analysis():
         self.m1 = 0
 
 
-    def addSpectrum(self, grpFileName, bRebin = True):
+    def addSpectrum(self, grpFileName, grpFilePath="./", bRebin = True):
+        cwd = os.getcwd()
+        os.chdir(grpFilePath)
         xspec.Spectrum(grpFileName)
         # For plotting
         xspec.Plot.xAxis = "kev"
@@ -99,7 +103,7 @@ class XRT_Analysis():
         # Ignoring invalid data chanels
         xspec.AllData.ignore("bad")
         xspec.AllData.ignore("**-0.3 10.-**")
-
+        os.chdir(cwd)
 
 
     # Use C-Statistics in fitting
@@ -108,9 +112,12 @@ class XRT_Analysis():
 
 
     # Set the grouped PHA file
-    def setGroupedPHA(self, igrpFile, bRebin = True):
+    def setGroupedPHA(self, igrpFile, ipathFile="./", bRebin = True):
+        cwd = os.getcwd()
+        os.chdir(ipathFile)
         self.grpFileName = igrpFile
         self._initializeXSpec(bRebin)
+        os.chdir(cwd)
 
     # Setting the min/max of the Fit
     def setcfluxMinMax(self, emin, emax):
@@ -383,14 +390,17 @@ class XRT_Analysis():
             try:
                 err = xspec.Fit.error("1. 4")
 
-                par4 = self.m1.cflux.lg10Flux.error
+                print("Sigma: ")
                 print (self.m1.cflux.lg10Flux.sigma)
+                print("Log error: ")
+                par4 = self.m1.cflux.lg10Flux.error
                 print (par4)
             except Exception as e:
 
                 print("Problem getting error. Chi^2 greater than 2? \n\t%s"%e)
                 err = -999
                 par4 = [0, 0]
+            print("Flux     Flux + Errorup      Flux + Errordown")
             print (np.power(10., self.m1.cflux.lg10Flux.values[0]),
                     np.power(10, par4[0]),
                     np.power(10, par4[1]))
@@ -408,9 +418,6 @@ class XRT_Analysis():
             iflux_err2 = xspec.AllModels.calcFlux("2. 10.0 1 err")
 
             iflux = xspec.AllData(1).flux
-            # iflux = float(iflux.split()[4].replace("(",""))
-            # iflux_errl = float(iflux.split()[4].replace("(",""))
-            # iflux_errh = float(iflux.split()[4].replace("(",""))
             self.modelDict["Flux [erg cm^-2 s^-1]"] = iflux[0]
             self.modelDict["Flux_errl [erg cm^-2 s^-1]"] = iflux[0] - iflux[1]
             self.modelDict["Flux_erru [erg cm^-2 s^-1]"] = iflux[2] - iflux[0]
@@ -571,16 +578,21 @@ class XRT_Analysis():
 
 
     def writeSpecTable(self):
+        is_ul = [False for i in range(len(self.modelDict["e2dnde [keV cm^-2 s^-1]"]))]
 
         cols = [ self.modelDict["Energy [keV]"] * u.keV,
-                self.modelDict["Energy_err [keV]"] * u.keV,
-                
+                self.modelDict["Energy [keV]"] * u.keV - self.modelDict["Energy_err [keV]"]/2 * u.keV,
+                self.modelDict["Energy [keV]"] * u.keV + self.modelDict["Energy_err [keV]"]/2 * u.keV,
                 self.modelDict["e2dnde [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s ,
                 self.modelDict["e2dnde_err [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s,
-                self.modelDict["e2dnde_deabsorbed [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s,
-                self.modelDict["e2dnde_deabsorbed_err [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s
+                self.modelDict["e2dnde [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s + self.modelDict["e2dnde_err [keV cm^-2 s^-1]"]/2 * u.keV / u.cm / u.cm / u.s ,
+                self.modelDict["e2dnde [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s - self.modelDict["e2dnde_err [keV cm^-2 s^-1]"]/2 * u.keV / u.cm / u.cm / u.s ,
+                is_ul
+                #self.modelDict["e2dnde_deabsorbed [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s,
+                #self.modelDict["e2dnde_deabsorbed_err [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s
                 ]
-        colnam = ["Energy", "EnergyErr", "E2dNdE", "E2dNdEErr", "E2dNdE_deabsorbed", "E2dNdEErr_deabsorbed"]
+
+        colnam = ["e_ref", "e_min", "e_max", "e2dnde", "e2dnde_err", "e2dnde_errp", "e2dnde_errn", "is_ul" ]
 
         tabl = Table(cols, names = colnam)
         return tabl
