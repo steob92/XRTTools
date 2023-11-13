@@ -27,11 +27,6 @@ while getopts ":r:d:p:ef:h" opt; do
     d )
       DEC=${OPTARG}
       ;;
-    e )
-      RA=356.77015
-      DEC=51.70497
-      DATADIR=Reprocessed
-      ;;
     f )
       DATADIR=${OPTARG}
       ;;
@@ -45,6 +40,14 @@ while getopts ":r:d:p:ef:h" opt; do
       ;;
   esac
 done
+
+# RA, DEC and input directory are required
+if [[ -z "$RA" ]] || [[ -z "$DEC" ]] || [[ -z "$DATADIR" ]]
+then
+  usage
+  exit
+fi
+
 echo "RA: $RA"
 echo "DEC: $DEC"
 echo "Data: $DATADIR"
@@ -122,6 +125,7 @@ function group_pha()
   grppha<<EOF
 $SRCPHA
 !$GRPPHA
+bad 0-29
 group min 20
 chkey BACKFILE ./$BACKPHA
 chkey RESPFILE ./$RMF
@@ -135,16 +139,24 @@ EOF
 function extract_image_all()
 {
   # Looking for PC files
-  PCFILE=$(ls *pc*_cl.evt)
+  NFILE_PC=$(ls *pc*po_cl.evt | wc -l)
   PCRMFFILE=$(ls *pc*.rmf)
-  PCEXPFILE=$(ls *pc*_ex.img)
-  NFILE_PC=$(ls *pc*_cl.evt | wc -l)
-
   # Looking for WT files
-  WTFILE=$(ls *wt*_cl.evt)
   WTRMFFILE=$(ls *wt*.rmf)
-  WTEXPFILE=$(ls *wt*_ex.img)
-  NFILE_WT=$(ls *wt*_cl.evt | wc -l)
+  NFILE_WT=$(ls *wt*po_cl.evt | wc -l)
+
+  XRTPIPELOG=$(ls xrtpipeline_*.log)
+  # Look for respective RMF files to be used in later stages of analysis
+  for f in $(awk '/Name of the input RMF file/ {print $7}' $XRTPIPELOG | tr -d \' | tr -d :); do
+    RMFFILE="$(basename $f)"
+    if [[ "$RMFFILE" == *"wt"* ]]; then
+      RMFNAME="wt.rmf"
+    elif [[ "$RMFFILE" == *"pc"* ]]; then
+      RMFNAME="pc.rmf"
+    fi
+    rm -f $RMFNAME
+    ln -fs $f $RMFNAME
+  done
 
   # Extract PC image
   if [ "$NFILE_PC" -eq "1" ]; then
@@ -152,11 +164,14 @@ function extract_image_all()
     echo "Extracting PC"
     echo "##########################"
 
-    rm pc.img pc_cl.evt
+    PCFILE=$(ls *pc*po_cl.evt)
+    PCRMFFILE=$(ls *pc*.rmf)
+    PCEXPFILE=$(ls *pc*po_ex.img)
+
+    rm -f pc.img pc_cl.evt
     extract_image "$PCFILE" "pc"
-    ln -s $PCFILE pc_cl.evt
-    ln -s $PCRMFFILE pc.rmf
-    ln -s $PCEXPFILE pc_ex.img
+    ln -fs $PCFILE pc_cl.evt
+    ln -fs $PCEXPFILE pc_ex.img
   fi
 
   # Extract WT file
@@ -165,11 +180,13 @@ function extract_image_all()
     echo "Extracting WT"
     echo "##########################"
 
-    rm wt.img wt_cl.evt
+    WTFILE=$(ls *wt*po_cl.evt)
+    WTEXPFILE=$(ls *wt*po_ex.img)
+
+    rm -f wt.img wt_cl.evt
     extract_image "$WTFILE" "wt"
-    ln -s $WTFILE wt_cl.evt
-    ln -s $WTRMFFILE wt.rmf
-    ln -s $WTEXPFILE wt_ex.img
+    ln -fs $WTFILE wt_cl.evt
+    ln -fs $WTEXPFILE wt_ex.img
   fi
 }
 
@@ -187,7 +204,7 @@ function extract_spectra_all()
   WTFILE=wt_cl.evt
 
   if [ -f $PCFILE ]; then
-    rm pc_src.arf
+    rm -f pc_src.arf
     extract_spectrum "$PCFILE" "pc_src.reg" "pc_src.pha"
     extract_spectrum "$PCFILE" "pc_back.reg" "pc_back.pha"
     xrtmkarf phafile=pc_src.pha srcx=-1 srcy=-1 outfile=pc_src.arf psfflag=yes expofile=pc_ex.img
@@ -198,7 +215,7 @@ function extract_spectra_all()
 
   # Extract WT file
   if [ -f $WTFILE ]; then
-    rm wt_src.arf
+    rm -f wt_src.arf
     extract_spectrum "$WTFILE" "wt_src.reg" "wt_src.pha"
     extract_spectrum "$WTFILE" "wt_back.reg" "wt_back.pha"
     xrtmkarf phafile=wt_src.pha srcx=-1 srcy=-1 outfile=wt_src.arf psfflag=yes expofile=wt_ex.img

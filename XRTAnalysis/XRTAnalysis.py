@@ -1,10 +1,12 @@
 import numpy as np
 # For fitting intrinsic power law
 from scipy.optimize import curve_fit
-from .__deabsorb import deabsorb as deab
+from __deabsorb import deabsorb as deab
 import matplotlib.pyplot as plt
 from astropy.table import Table
 from astropy import units as u
+
+import os
 # Checking if xspec can be imported
 # PyXSpec can be installed with heasoft!
 try :
@@ -81,7 +83,7 @@ class XRT_Analysis():
         xspec.Plot.xAxis = "kev"
         if (bRebin):
             print ("Rebinning")
-            xspec.Plot.setRebin(10,10)
+            xspec.Plot.setRebin(5,10)
         # Ignoring invalid data chanels
         xspec.AllData.ignore("bad")
         xspec.AllData.ignore("**-0.3 10.-**")
@@ -89,17 +91,19 @@ class XRT_Analysis():
         self.m1 = 0
 
 
-    def addSpectrum(self, grpFileName, bRebin = True):
+    def addSpectrum(self, grpFileName, grpFilePath="./", bRebin = True):
+        cwd = os.getcwd()
+        os.chdir(grpFilePath)
         xspec.Spectrum(grpFileName)
         # For plotting
         xspec.Plot.xAxis = "kev"
         if (bRebin):
             print ("Rebinning")
-            xspec.Plot.setRebin(10,10)
+            xspec.Plot.setRebin(5,10)
         # Ignoring invalid data chanels
         xspec.AllData.ignore("bad")
         xspec.AllData.ignore("**-0.3 10.-**")
-
+        os.chdir(cwd)
 
 
     # Use C-Statistics in fitting
@@ -108,9 +112,12 @@ class XRT_Analysis():
 
 
     # Set the grouped PHA file
-    def setGroupedPHA(self, igrpFile, bRebin = True):
+    def setGroupedPHA(self, igrpFile, ipathFile="./", bRebin = True):
+        cwd = os.getcwd()
+        os.chdir(ipathFile)
         self.grpFileName = igrpFile
         self._initializeXSpec(bRebin)
+        os.chdir(cwd)
 
     # Setting the min/max of the Fit
     def setcfluxMinMax(self, emin, emax):
@@ -144,33 +151,8 @@ class XRT_Analysis():
             print ("Model unknown. Feel free to add it.\n defaulting to a power law")
             self.setModel("pwl")
 
-        # power law model
-        # if imodel == "pwl":
-        #     if self.ifcFlux :
-        #         self.modelType = "pha*cflux*po"
-        #         self.m1 = xspec.Model(self.modelType)
-        #         self.m1.powerlaw.norm.frozen = True
-        #     else :
-        #         self.modelType = "pha*po"
-        #         self.m1 = xspec.Model(self.modelType)
         self.modelType = absorb + str_cflux + mod
         self.m1 = xspec.Model(self.modelType)
-        
-        # # # log parabola model
-        # # elif imodel == "logpar":
-        # #     if self.ifcFlux :
-        # #         self.modelType = "pha*cflux*logpar"
-        # #         self.m1 = xspec.Model(self.modelType)
-        # #         self.m1.logpar.norm.frozen = True
-
-        # #     else :
-        # #         self.modelType = "pha*logpar"
-        # #         self.m1 = xspec.Model(self.modelType)
-        # #         self.m1.logpar.norm.frozen = False
-
-        # else :
-        #     print ("Model unknown. Feel free to add it.\n defaulting to a power law")
-        #     self.setModel("pwl")
 
         if imodel.lower() == "pwl":
             self.m1.powerlaw.norm.frozen = cflux
@@ -272,16 +254,16 @@ class XRT_Analysis():
                     norm_err = xspec.AllModels(1)(3).error
                     # Covariance Matrix
                     cov = xspec.Fit.covariance
-                    
+
                     self.covar = np.zeros((2,2))
                     self.covar_labels = np.empty((2,2),  dtype="str")
 
                     self.covar[0][0] = cov[0]
                     self.covar[0][1] = cov[1]
-                    
+
                     self.covar_labels[0][0] = "didi"
                     self.covar_labels[0][1] = "didn"
-                    
+
                     self.covar[1][0] = cov[1]
                     self.covar[1][1] = cov[2]
 
@@ -354,7 +336,7 @@ class XRT_Analysis():
                     self.covar = np.zeros((3,3))
                     # To help the user
                     self.covar_labels = np.empty((3,3),  dtype="str")
-                    
+
                     self.covar[0][0] = cov[0]
                     self.covar[0][1] = cov[1]
                     self.covar[0][2] = cov[3]
@@ -364,16 +346,16 @@ class XRT_Analysis():
                     self.covar_labels[0][2] = "dadn"
 
 
-                    
+
 
                     self.covar[1][0] = cov[1]
                     self.covar[1][1] = cov[2]
                     self.covar[1][2] = cov[4]
-                    
+
                     self.covar_labels[1][0] = "dbda"
                     self.covar_labels[1][1] = "dbdb"
                     self.covar_labels[1][2] = "dbdn"
-                    
+
                     self.covar[2][0] = cov[3]
                     self.covar[2][1] = cov[4]
                     self.covar[2][2] = cov[5]
@@ -405,22 +387,20 @@ class XRT_Analysis():
 
 
             print ("Getting Flux")
-            # print (np.power(10., self.m1.cflux.lg10Flux.values[0]))
-            # print (np.power(10., self.m1.cflux.lg10Flux.values[0] - self.m1.cflux.lg10Flux.sigma))
-            # print (np.power(10., self.m1.cflux.lg10Flux.values[0] + self.m1.cflux.lg10Flux.sigma))
             try:
                 err = xspec.Fit.error("1. 4")
-            
-                par4 = self.m1.cflux.lg10Flux.error
+
+                print("Sigma: ")
                 print (self.m1.cflux.lg10Flux.sigma)
+                print("Log error: ")
+                par4 = self.m1.cflux.lg10Flux.error
                 print (par4)
             except Exception as e:
 
                 print("Problem getting error. Chi^2 greater than 2? \n\t%s"%e)
                 err = -999
                 par4 = [0, 0]
-            # print (self.m1.cflux.lg10Flux.er)
-            # print (par4.error)
+            print("Flux     Flux + Errorup      Flux + Errordown")
             print (np.power(10., self.m1.cflux.lg10Flux.values[0]),
                     np.power(10, par4[0]),
                     np.power(10, par4[1]))
@@ -438,9 +418,6 @@ class XRT_Analysis():
             iflux_err2 = xspec.AllModels.calcFlux("2. 10.0 1 err")
 
             iflux = xspec.AllData(1).flux
-            # iflux = float(iflux.split()[4].replace("(",""))
-            # iflux_errl = float(iflux.split()[4].replace("(",""))
-            # iflux_errh = float(iflux.split()[4].replace("(",""))
             self.modelDict["Flux [erg cm^-2 s^-1]"] = iflux[0]
             self.modelDict["Flux_errl [erg cm^-2 s^-1]"] = iflux[0] - iflux[1]
             self.modelDict["Flux_erru [erg cm^-2 s^-1]"] = iflux[2] - iflux[0]
@@ -499,14 +476,14 @@ class XRT_Analysis():
             b = (np.log(E)**2)*Cov[0][0]
             # (df/db)^2 sigma_bb
             c = (np.log(E) * np.log10(E))**2 *Cov[1][1]
-            
+
             # df/dn * df/da * sigma_na
             d = -2 * np.log(E) * Cov[2][0] / parms[0]
             # df/dn * df/db * sigma_nb
             e = -2 * np.log(E) * np.log10(E) * Cov[2][1] / parms[0]
             # df/da * df/db * sigma_ab
             f = 2 * np.log(E) **2 * np.log10(E) * Cov[0][1]
-            
+
             fdelx = fx * np.sqrt(a + b + c + d + e + f)
         else :
             print ("Model not yet implemented")
@@ -601,16 +578,21 @@ class XRT_Analysis():
 
 
     def writeSpecTable(self):
+        is_ul = [False for i in range(len(self.modelDict["e2dnde [keV cm^-2 s^-1]"]))]
 
         cols = [ self.modelDict["Energy [keV]"] * u.keV,
-                self.modelDict["Energy_err [keV]"] * u.keV,
+                self.modelDict["Energy [keV]"] * u.keV - self.modelDict["Energy_err [keV]"]/2 * u.keV,
+                self.modelDict["Energy [keV]"] * u.keV + self.modelDict["Energy_err [keV]"]/2 * u.keV,
                 self.modelDict["e2dnde [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s ,
                 self.modelDict["e2dnde_err [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s,
-                self.modelDict["e2dnde_deabsorbed [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s,
-                self.modelDict["e2dnde_deabsorbed_err [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s
+                self.modelDict["e2dnde [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s + self.modelDict["e2dnde_err [keV cm^-2 s^-1]"]/2 * u.keV / u.cm / u.cm / u.s ,
+                self.modelDict["e2dnde [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s - self.modelDict["e2dnde_err [keV cm^-2 s^-1]"]/2 * u.keV / u.cm / u.cm / u.s ,
+                is_ul
+                #self.modelDict["e2dnde_deabsorbed [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s,
+                #self.modelDict["e2dnde_deabsorbed_err [keV cm^-2 s^-1]"] * u.keV / u.cm / u.cm / u.s
                 ]
 
-        colnam = ["Energy", "EnergyErr", "E2dNdE", "E2dNdEErr", "E2dNdE_deabsorbed", "E2dNdEErr_deabsorbed"]
+        colnam = ["e_ref", "e_min", "e_max", "e2dnde", "e2dnde_err", "e2dnde_errp", "e2dnde_errn", "is_ul" ]
 
         tabl = Table(cols, names = colnam)
         return tabl
